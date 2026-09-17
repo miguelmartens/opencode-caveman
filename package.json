@@ -6,8 +6,10 @@
     "opencode-plugin",
     "opencode",
     "caveman",
-    "tokens",
-    "prompt-engineering"
+    "ai-agents",
+    "llm",
+    "prompt-engineering",
+    "token-efficiency"
   ],
   "license": "MIT",
   "author": {
