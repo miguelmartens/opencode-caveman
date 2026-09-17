@@ -60,4 +60,4 @@ Keep the initial commit a `chore:` (not a releasable unit) so `release-please` d
 2. `release-please` opens or updates a release PR with the version bump and changelog.
 3. Merge the release PR: the tag and GitHub release are created, and CI publishes that version to npm.
 
-Force a specific version with `Release-As: x.y.z` in a commit body. Protect `main` in Settings → Rules with squash merges and the CI check required.
+Force a specific version with `Release-As: x.y.z` in a commit body. `main` is protected by the `Protect main` ruleset: PRs only, squash merges, and the CI checks required.
