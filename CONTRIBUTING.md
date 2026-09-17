@@ -64,4 +64,9 @@ Keep the initial commit a `chore:` (not a releasable unit) so `release-please` d
 2. `release-please` opens or updates a release PR with the version bump and changelog.
 3. Merge the release PR: the tag and GitHub release are created, and CI publishes that version to npm.
 
-Force a specific version with `Release-As: x.y.z` in a commit body. `main` is protected by the `Protect main` ruleset: PRs only, squash merges, and the CI checks required.
+Force a specific version with `Release-As: x.y.z` in a commit body (works on an otherwise empty commit too). `main` is protected by the `Protect main` ruleset: PRs only, squash merges, and the CI checks required.
+
+Two things to know:
+
+- Workflow runs on release PRs are created by `GITHUB_TOKEN`, and GitHub holds them for approval. Open the release PR and click **Approve and run** once; the checks then run normally. That is GitHub's anti-recursion behaviour, not a misconfiguration.
+- To publish a version that is tagged but missing from npm, run the Release workflow manually (`gh workflow run release.yml`); it checks npm first and skips itself when the version already exists.
