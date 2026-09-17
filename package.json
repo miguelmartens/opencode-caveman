@@ -37,6 +37,7 @@
     "NOTICE.md"
   ],
   "scripts": {
+    "prepare": "git config core.hooksPath .githooks",
     "test": "node --test",
     "format": "prettier --write .",
     "format:check": "prettier --check ."

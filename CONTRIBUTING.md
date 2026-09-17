@@ -6,10 +6,14 @@ Thanks for the interest. This package is a thin OpenCode plugin; the rules thems
 
 Node.js 20 or newer.
 
-    npm install        # dev-only: prettier
+    npm install        # dev-only: prettier; also wires the pre-commit hook
     npm test           # node --test, no other dependencies
 
 `make` wraps the common commands: `make help` lists them, `make check` runs everything CI runs.
+
+The pre-commit hook (`.githooks/pre-commit`, runs `npm test`) is wired by the `prepare` script on `npm install`. If you skip the install, enable it by hand once per clone:
+
+    git config core.hooksPath .githooks
 
 Enable the pre-commit hook once per clone:
 
