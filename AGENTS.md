@@ -6,7 +6,7 @@ OpenCode plugin packaging of the Caveman rules (upstream: `JuliusBrussee/caveman
 
 - Test: `npm test` (node `--test`, no runtime dependencies).
 - Format: `npm run format` / `npm run format:check` (Prettier; `skills/`, `agents/`, `NOTICE.md`, `LICENSE` are excluded and must stay byte-identical).
-- Pre-commit hook: `git config core.hooksPath .githooks` once per clone; it runs `npm test`.
+- Pre-commit hook: wired automatically by `npm install` (`prepare` script); manual fallback is `git config core.hooksPath .githooks`. It runs `npm test`.
 - Local use: opening OpenCode in this repo loads `.opencode/plugins/caveman.mjs` through the root `opencode.json`.
 
 ## Rules
