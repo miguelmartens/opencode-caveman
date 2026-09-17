@@ -37,7 +37,7 @@
     "NOTICE.md"
   ],
   "scripts": {
-    "test": "node --test tests/",
+    "test": "node --test",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
   },
