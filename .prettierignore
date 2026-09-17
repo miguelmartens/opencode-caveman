@@ -4,6 +4,9 @@ agents/
 NOTICE.md
 LICENSE
 
+# release-please generates this file; reformatting it would fail the release PR's CI
+CHANGELOG.md
+
 node_modules/
 package-lock.json
 *.tgz
