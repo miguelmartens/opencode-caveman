@@ -1,0 +1,17 @@
+# package.json "files" is the primary allowlist for the tarball. This file is
+# the fallback if that allowlist is ever removed; keep the two in sync.
+.github/
+.githooks/
+tests/
+AGENTS.md
+CLAUDE.md
+CONTRIBUTING.md
+CODE_OF_CONDUCT.md
+SECURITY.md
+.editorconfig
+.gitattributes
+.gitignore
+.prettierignore
+.prettierrc.json
+opencode.json
+*.tgz

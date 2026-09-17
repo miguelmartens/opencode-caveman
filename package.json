@@ -1,0 +1,53 @@
+{
+  "name": "@miguelmartens/opencode-caveman",
+  "version": "1.0.0",
+  "description": "Caveman for OpenCode: terse output mode, always on, with /caveman level switching. why use many token when few do trick.",
+  "keywords": [
+    "opencode-plugin",
+    "opencode",
+    "caveman",
+    "tokens",
+    "prompt-engineering"
+  ],
+  "license": "MIT",
+  "author": {
+    "name": "Miguel Martens",
+    "url": "https://github.com/miguelmartens"
+  },
+  "homepage": "https://github.com/miguelmartens/opencode-caveman",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/miguelmartens/opencode-caveman.git"
+  },
+  "bugs": {
+    "url": "https://github.com/miguelmartens/opencode-caveman/issues"
+  },
+  "main": "./.opencode/plugins/caveman.mjs",
+  "exports": {
+    ".": "./.opencode/plugins/caveman.mjs",
+    "./plugin": "./.opencode/plugins/caveman.mjs"
+  },
+  "files": [
+    ".opencode/",
+    "agents/",
+    "hooks/",
+    "skills/",
+    "CHANGELOG.md",
+    "LICENSE",
+    "NOTICE.md"
+  ],
+  "scripts": {
+    "test": "node --test tests/",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "devDependencies": {
+    "prettier": "^3.9.7"
+  }
+}

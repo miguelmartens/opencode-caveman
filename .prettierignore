@@ -1,0 +1,9 @@
+# Vendored upstream content must stay byte-identical; legal text stays verbatim.
+skills/
+agents/
+NOTICE.md
+LICENSE
+
+node_modules/
+package-lock.json
+*.tgz
