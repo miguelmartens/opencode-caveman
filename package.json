@@ -1,6 +1,6 @@
 {
   "name": "@miguelmartens/opencode-caveman",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Caveman for OpenCode: terse output mode, always on, with /caveman level switching. why use many token when few do trick.",
   "keywords": [
     "opencode-plugin",
