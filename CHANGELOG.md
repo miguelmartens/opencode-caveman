@@ -4,6 +4,13 @@ All notable changes to this project are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.1](https://github.com/miguelmartens/opencode-caveman/compare/v1.0.0...v1.0.1) (2026-09-17)
+
+
+### Miscellaneous Chores
+
+* release 1.0.1 ([376ff4a](https://github.com/miguelmartens/opencode-caveman/commit/376ff4aceb711024a7bde804581cfc05d65f44f7))
+
 ## [1.0.0] - 2026-09-17
 
 ### Added
