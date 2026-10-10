@@ -15,12 +15,13 @@ opencode plugin @miguelmartens/opencode-caveman
 ```
 
 That installs the package and adds it to your config. Or add it by hand
-(global at `~/.config/opencode/opencode.json`, or per project):
+(global at `~/.config/opencode/opencode.json`, or per project) — V2 uses the
+`plugins` key (`plugin` on V1):
 
 ```json
 {
   "$schema": "https://opencode.ai/config.json",
-  "plugin": ["@miguelmartens/opencode-caveman"]
+  "plugins": ["@miguelmartens/opencode-caveman"]
 }
 ```
 
@@ -28,7 +29,7 @@ Or run it from a checkout with no publish step — the repo ships a root
 `opencode.json` that does exactly this:
 
 ```json
-{ "plugin": ["./.opencode/plugins/caveman.mjs"] }
+{ "plugins": ["./.opencode/plugins/caveman"] }
 ```
 
 Restart OpenCode after changing config. The mode is active from the next
@@ -56,12 +57,15 @@ session; no extra setup.
 
 ## How it works
 
-| Hook                                 | Effect                                                                                                          |
-| ------------------------------------ | --------------------------------------------------------------------------------------------------------------- |
-| `config`                             | Registers the commands, the bundled skills, and the cavecrew subagents                                          |
-| `experimental.chat.system.transform` | Injects the level-filtered ruleset into every turn's system prompt — no drift, survives `/clear` and compaction |
-| `command.execute.before`             | Persists `/caveman <level>` to `~/.config/opencode/.caveman-active`                                             |
-| `chat.message`                       | Turns caveman off on a standalone `stop caveman` / `normal mode` message                                        |
+On OpenCode V2 the plugin uses the plugin context; on V1 (1.18.29+) it uses the
+legacy hooks with the same behavior.
+
+| V2 hook                                  | Effect                                                                                                          |
+| ---------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| `command` / `skill` / `agent` transforms | Register the commands, the bundled skills, and the cavecrew subagents                                           |
+| `session.hook("context")`                | Injects the level-filtered ruleset into every turn's system prompt — no drift, survives `/clear` and compaction |
+| command `execute`                        | Persists `/caveman <level>` to `~/.config/opencode/.caveman-active`                                             |
+| `session.hook("prompt")`                 | Turns caveman off on a standalone `stop caveman` / `normal mode` message                                        |
 
 The injected ruleset is the vendored caveman skill filtered to the active level:
 only that level's intensity-table row and worked examples survive, so

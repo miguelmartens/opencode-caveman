@@ -1,4 +1,4 @@
 {
   "$schema": "https://opencode.ai/config.json",
-  "plugin": ["./.opencode/plugins/caveman.mjs"]
+  "plugins": ["./.opencode/plugins/caveman"]
 }

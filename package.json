@@ -24,10 +24,10 @@
   "bugs": {
     "url": "https://github.com/miguelmartens/opencode-caveman/issues"
   },
-  "main": "./.opencode/plugins/caveman.mjs",
+  "main": "./.opencode/plugins/caveman/index.mjs",
   "exports": {
-    ".": "./.opencode/plugins/caveman.mjs",
-    "./plugin": "./.opencode/plugins/caveman.mjs"
+    ".": "./.opencode/plugins/caveman/index.mjs",
+    "./plugin": "./.opencode/plugins/caveman/index.mjs"
   },
   "files": [
     ".opencode/",

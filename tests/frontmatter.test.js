@@ -10,8 +10,9 @@ const {
   parseAgentFile,
   parseCommandFile,
   parseField,
+  parseSkillFile,
   splitFrontmatter,
-} = require('../.opencode/plugins/caveman-frontmatter.cjs');
+} = require('../.opencode/plugins/caveman/caveman-frontmatter.cjs');
 
 function tempFile(name, content) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'caveman-fm-'));
@@ -48,6 +49,24 @@ test('parseAgentFile folds a block-scalar description and keeps the prompt body'
     'First line of the description. Second line of the description.',
   );
   assert.equal(parsed.prompt, 'Prompt body.');
+});
+
+test('parseSkillFile keeps the body without frontmatter', () => {
+  const file = tempFile(
+    'SKILL.md',
+    '---\nname: Caveman Test\ndescription: >\n  Folded skill description.\n---\n\n# Body\n\nInstructions.\n',
+  );
+  const parsed = parseSkillFile(file);
+  assert.equal(parsed.name, 'Caveman Test');
+  assert.equal(parsed.description, 'Folded skill description.');
+  assert.equal(parsed.content, '# Body\n\nInstructions.');
+});
+
+test('parseSkillFile tolerates a missing frontmatter block', () => {
+  const file = tempFile('SKILL.md', 'Plain body.\n');
+  const parsed = parseSkillFile(file);
+  assert.equal(parsed.name, undefined);
+  assert.equal(parsed.content, 'Plain body.');
 });
 
 test('parseField supports the literal block form', () => {
