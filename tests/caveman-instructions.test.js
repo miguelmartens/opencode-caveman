@@ -4,75 +4,57 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 
 const {
-  filterSkillBodyForLevel,
   getFallbackInstructions,
-  getLevelInstructions,
+  getModeInstructions,
+  rulesetBanner,
+  stripFrontmatter,
 } = require('../hooks/caveman-instructions.cjs');
 
-test('instructions carry the active level header and only its intensity row', () => {
-  const output = getLevelInstructions('full');
-  assert.match(output, /^CAVEMAN MODE ACTIVE — level: full/);
-  assert.ok(output.includes('| **full** |'));
-  assert.ok(!output.includes('| **lite** |'));
-  assert.ok(!output.includes('| **ultra** |'));
+test('instructions carry the active mode banner and the whole skill body', () => {
+  const output = getModeInstructions('caveman');
+  assert.match(output, /^CAVEMAN MODE ACTIVE — mode: caveman/);
+  assert.ok(output.includes('Respond terse like smart caveman'));
+  assert.ok(output.includes('## Rules'));
+  assert.ok(!output.includes('Then cut again'), 'no other mode body leaks in');
+  assert.ok(!output.includes('name: caveman'), 'frontmatter stripped');
 });
 
-test('instructions keep only the active level worked examples', () => {
-  assert.ok(getLevelInstructions('lite').includes('- lite: "'));
-  assert.ok(!getLevelInstructions('lite').includes('- full: "'));
+test('ultracave and megacave inject their own skill bodies', () => {
+  const ultracave = getModeInstructions('ultracave');
+  assert.match(ultracave, /^CAVEMAN MODE ACTIVE — mode: ultracave/);
+  assert.ok(ultracave.includes('Then cut again'));
+  assert.ok(!ultracave.includes('Caveman is a voice'), 'no other mode body leaks in');
 
-  const full = getLevelInstructions('full');
-  assert.ok(full.includes('- full: "'));
-  assert.ok(!full.includes('- lite: "'));
-  assert.ok(!full.includes('- ultra: "'));
+  const megacave = getModeInstructions('megacave');
+  assert.match(megacave, /^CAVEMAN MODE ACTIVE — mode: megacave/);
+  assert.ok(megacave.includes('文言'));
 });
 
-test('the wenyan alias resolves to the wenyan-full level', () => {
-  const output = getLevelInstructions('wenyan');
-  assert.match(output, /^CAVEMAN MODE ACTIVE — level: wenyan-full/);
-  assert.ok(output.includes('- wenyan-full: "'));
-  assert.ok(!output.includes('- wenyan-lite: "'));
+test('legacy level names resolve to their mode', () => {
+  assert.match(getModeInstructions('ultra'), /^CAVEMAN MODE ACTIVE — mode: ultracave/);
+  assert.match(getModeInstructions('wenyan'), /^CAVEMAN MODE ACTIVE — mode: megacave/);
+  assert.match(getModeInstructions('full'), /^CAVEMAN MODE ACTIVE — mode: caveman/);
 });
 
-test('level-independent rules survive every level', () => {
-  for (const level of ['lite', 'full', 'ultra', 'wenyan-full']) {
-    const output = getLevelInstructions(level);
-    assert.ok(output.includes('## Auto-Clarity'), level + ' keeps Auto-Clarity');
-    assert.ok(
-      output.includes('Never drop not/never/no/only/except'),
-      level + ' keeps the negation rule',
-    );
-    assert.ok(output.includes('## Boundaries'), level + ' keeps Boundaries');
-    assert.ok(!output.includes('name: caveman'), level + ' strips frontmatter');
-  }
+test('off injects nothing; unknown modes fall back to the default', () => {
+  assert.equal(getModeInstructions('off'), null);
+  assert.match(getModeInstructions('fast'), /^CAVEMAN MODE ACTIVE — mode: caveman/);
 });
 
-test('unquoted rule bullets that start with a level word are never filtered', () => {
-  const body = [
-    '---',
-    'name: fixture',
-    '---',
-    '',
-    '| Level | What change |',
-    '|-------|------------|',
-    '| **lite** | keep me |',
-    '| **full** | drop me at lite |',
-    '',
-    '- Full: this is an ordinary rule, not an example',
-    '- lite: "quoted example"',
-    '- full: "other example"',
-  ].join('\n');
-
-  const output = filterSkillBodyForLevel(body, 'lite');
-  assert.ok(output.includes('| **lite** |'));
-  assert.ok(!output.includes('| **full** |'));
-  assert.ok(output.includes('- Full: this is an ordinary rule, not an example'));
-  assert.ok(output.includes('- lite: "quoted example"'));
-  assert.ok(!output.includes('- full: "other example"'));
+test('fallback instructions name the mode and stay in its register', () => {
+  assert.match(
+    getFallbackInstructions('ultracave'),
+    /^CAVEMAN MODE ACTIVE — mode: ultracave\n\nRespond terse like smart caveman\. All technical substance stay\. Only fluff die\. Then cut again\.$/,
+  );
+  assert.ok(getFallbackInstructions('megacave').includes('文言'));
+  assert.equal(getFallbackInstructions('off'), null);
 });
 
-test('fallback instructions name the level and stay in the caveman register', () => {
-  const output = getFallbackInstructions('ultra');
-  assert.match(output, /^CAVEMAN MODE ACTIVE — level: ultra/);
-  assert.ok(output.includes('Auto-Clarity'));
+test('stripFrontmatter removes the frontmatter block and keeps the body', () => {
+  assert.equal(stripFrontmatter('---\nname: x\ndescription: y\n---\nBody\n').trim(), 'Body');
+  assert.equal(stripFrontmatter('Body only'), 'Body only');
+});
+
+test('rulesetBanner labels the mode', () => {
+  assert.equal(rulesetBanner('megacave'), 'CAVEMAN MODE ACTIVE — mode: megacave');
 });
