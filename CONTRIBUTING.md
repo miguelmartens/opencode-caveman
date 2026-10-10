@@ -38,7 +38,7 @@ change is dropping the `model:` line from agent frontmatter.
 
 - Keep the diff focused; one concern per PR.
 - `npm test` and `npm run format:check` must pass — CI runs both.
-- Runtime code lives in `hooks/*.cjs` and `.opencode/plugins/caveman.mjs`; tests live in `tests/`.
+- Runtime code lives in `hooks/*.cjs` and `.opencode/plugins/caveman/index.mjs`; tests live in `tests/`.
 - Do not add dependencies for what a few lines of Node can do.
 
 ## Releases

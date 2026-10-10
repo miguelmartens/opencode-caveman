@@ -2,10 +2,10 @@
 
 // caveman frontmatter parser.
 //
-// Kept out of caveman.mjs so the plugin module's only top-level export is the
-// plugin function itself. OpenCode's legacy plugin loader treats every
-// function exported from a plugin module as a plugin; calling the parser as
-// one throws. One plugin-shaped export per module.
+// Kept out of index.mjs so the plugin module's only top-level export is the
+// plugin definition itself. OpenCode's legacy loader treats every function
+// exported from a plugin module as a plugin; calling the parser as one throws.
+// One plugin-shaped export per module.
 
 const fs = require('fs');
 
@@ -60,4 +60,17 @@ function parseAgentFile(filePath) {
   };
 }
 
-module.exports = { parseAgentFile, parseCommandFile, parseField, splitFrontmatter };
+function parseSkillFile(filePath) {
+  const content = fs.readFileSync(filePath, 'utf8');
+  const parsed = splitFrontmatter(content);
+  // All frontmatter is optional at runtime; keep the body either way, without
+  // frontmatter, matching how OpenCode loads a discovered SKILL.md.
+  if (!parsed) return { name: undefined, description: undefined, content: content.trim() };
+  return {
+    name: parseField(parsed.frontmatter, 'name'),
+    description: parseField(parsed.frontmatter, 'description'),
+    content: parsed.body,
+  };
+}
+
+module.exports = { parseAgentFile, parseCommandFile, parseField, parseSkillFile, splitFrontmatter };
