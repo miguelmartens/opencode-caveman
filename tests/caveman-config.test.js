@@ -7,12 +7,12 @@ const os = require('node:os');
 const path = require('node:path');
 
 const {
-  getDefaultLevel,
+  getDefaultMode,
   getStatePath,
   isDeactivationCommand,
-  normalizeLevel,
-  readLevel,
-  writeLevel,
+  normalizeMode,
+  readMode,
+  writeMode,
 } = require('../hooks/caveman-config.cjs');
 
 const ENV_KEYS = [
@@ -38,30 +38,28 @@ test.afterEach(() => {
   }
 });
 
-test('normalizeLevel accepts every level', () => {
-  for (const level of [
-    'off',
-    'lite',
-    'full',
-    'ultra',
-    'wenyan-lite',
-    'wenyan-full',
-    'wenyan-ultra',
-  ]) {
-    assert.equal(normalizeLevel(level), level);
+test('normalizeMode accepts every mode', () => {
+  for (const mode of ['off', 'caveman', 'ultracave', 'megacave']) {
+    assert.equal(normalizeMode(mode), mode);
   }
 });
 
-test('normalizeLevel trims, lowercases, and resolves the wenyan alias', () => {
-  assert.equal(normalizeLevel('  ULTRA '), 'ultra');
-  assert.equal(normalizeLevel('wenyan'), 'wenyan-full');
+test('normalizeMode trims, lowercases, and resolves legacy level names', () => {
+  assert.equal(normalizeMode('  ULTRACAVE '), 'ultracave');
+  assert.equal(normalizeMode('lite'), 'caveman');
+  assert.equal(normalizeMode('full'), 'caveman');
+  assert.equal(normalizeMode('ultra'), 'ultracave');
+  assert.equal(normalizeMode('wenyan'), 'megacave');
+  assert.equal(normalizeMode('wenyan-lite'), 'megacave');
+  assert.equal(normalizeMode('wenyan-full'), 'megacave');
+  assert.equal(normalizeMode('wenyan-ultra'), 'megacave');
 });
 
-test('normalizeLevel rejects unknown and non-string input', () => {
-  assert.equal(normalizeLevel('fast'), null);
-  assert.equal(normalizeLevel(''), null);
-  assert.equal(normalizeLevel(null), null);
-  assert.equal(normalizeLevel(42), null);
+test('normalizeMode rejects unknown and non-string input', () => {
+  assert.equal(normalizeMode('fast'), null);
+  assert.equal(normalizeMode(''), null);
+  assert.equal(normalizeMode(null), null);
+  assert.equal(normalizeMode(42), null);
 });
 
 test('isDeactivationCommand matches only standalone commands', () => {
@@ -75,48 +73,48 @@ test('isDeactivationCommand matches only standalone commands', () => {
   assert.equal(isDeactivationCommand(undefined), false);
 });
 
-test('getDefaultLevel falls back to full when nothing is configured', () => {
-  assert.equal(getDefaultLevel(), 'full');
+test('getDefaultMode falls back to caveman when nothing is configured', () => {
+  assert.equal(getDefaultMode(), 'caveman');
 });
 
-test('getDefaultLevel reads defaultMode from the config file', () => {
+test('getDefaultMode reads defaultMode from the config file', () => {
   fs.writeFileSync(
     path.join(process.env.CAVEMAN_CONFIG_DIR, 'config.json'),
-    JSON.stringify({ defaultMode: 'lite' }),
+    JSON.stringify({ defaultMode: 'ultracave' }),
   );
-  assert.equal(getDefaultLevel(), 'lite');
+  assert.equal(getDefaultMode(), 'ultracave');
 });
 
 test('environment variable outranks the config file', () => {
   fs.writeFileSync(
     path.join(process.env.CAVEMAN_CONFIG_DIR, 'config.json'),
-    JSON.stringify({ defaultMode: 'lite' }),
+    JSON.stringify({ defaultMode: 'caveman' }),
   );
-  process.env.CAVEMAN_DEFAULT_MODE = 'ultra';
-  assert.equal(getDefaultLevel(), 'ultra');
+  process.env.CAVEMAN_DEFAULT_MODE = 'megacave';
+  assert.equal(getDefaultMode(), 'megacave');
 });
 
-test('invalid env value and invalid config file fall back to full', () => {
+test('invalid env value and invalid config file fall back to caveman', () => {
   process.env.CAVEMAN_DEFAULT_MODE = 'nope';
-  assert.equal(getDefaultLevel(), 'full');
+  assert.equal(getDefaultMode(), 'caveman');
 
   fs.writeFileSync(path.join(process.env.CAVEMAN_CONFIG_DIR, 'config.json'), '{ not json');
   delete process.env.CAVEMAN_DEFAULT_MODE;
-  assert.equal(getDefaultLevel(), 'full');
+  assert.equal(getDefaultMode(), 'caveman');
 });
 
-test('config file defaultMode accepts the wenyan alias and rejects unknown levels', () => {
+test('config file defaultMode accepts legacy names and rejects unknown modes', () => {
   fs.writeFileSync(
     path.join(process.env.CAVEMAN_CONFIG_DIR, 'config.json'),
     JSON.stringify({ defaultMode: 'wenyan' }),
   );
-  assert.equal(getDefaultLevel(), 'wenyan-full');
+  assert.equal(getDefaultMode(), 'megacave');
 
   fs.writeFileSync(
     path.join(process.env.CAVEMAN_CONFIG_DIR, 'config.json'),
     JSON.stringify({ defaultMode: 'fast' }),
   );
-  assert.equal(getDefaultLevel(), 'full');
+  assert.equal(getDefaultMode(), 'caveman');
 });
 
 test('state file lives beside the opencode config and honors OPENCODE_CONFIG_DIR', () => {
@@ -130,25 +128,35 @@ test('state file lives beside the opencode config and honors OPENCODE_CONFIG_DIR
   assert.equal(getStatePath(), path.join(override, '.caveman-active'));
 });
 
-test('writeLevel and readLevel round-trip through the state file', () => {
-  assert.equal(writeLevel('ultra'), 'ultra');
+test('writeMode and readMode round-trip through the state file', () => {
+  assert.equal(writeMode('ultracave'), 'ultracave');
   assert.equal(
     fs.readFileSync(path.join(process.env.XDG_CONFIG_HOME, 'opencode', '.caveman-active'), 'utf8'),
-    'ultra',
+    'ultracave',
   );
-  assert.equal(readLevel(), 'ultra');
+  assert.equal(readMode(), 'ultracave');
 
-  writeLevel('off');
-  assert.equal(readLevel(), 'off');
+  writeMode('off');
+  assert.equal(readMode(), 'off');
 });
 
-test('writeLevel rejects unknown levels without touching the state file', () => {
-  writeLevel('lite');
-  assert.equal(writeLevel('bogus'), null);
-  assert.equal(readLevel(), 'lite');
+test('writeMode rejects unknown modes without touching the state file', () => {
+  writeMode('caveman');
+  assert.equal(writeMode('bogus'), null);
+  assert.equal(readMode(), 'caveman');
 });
 
-test('readLevel falls back to the default level when no state exists', () => {
+test('readMode resolves legacy level names left by older plugin versions', () => {
+  const statePath = path.join(process.env.XDG_CONFIG_HOME, 'opencode', '.caveman-active');
+  fs.mkdirSync(path.dirname(statePath), { recursive: true });
+  fs.writeFileSync(statePath, 'ultra');
+  assert.equal(readMode(), 'ultracave');
+
+  fs.writeFileSync(statePath, 'wenyan-lite');
+  assert.equal(readMode(), 'megacave');
+});
+
+test('readMode falls back to the default mode when no state exists', () => {
   process.env.CAVEMAN_DEFAULT_MODE = 'wenyan-lite';
-  assert.equal(readLevel(), 'wenyan-lite');
+  assert.equal(readMode(), 'megacave');
 });

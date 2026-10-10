@@ -6,7 +6,7 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 
-const { readLevel, writeLevel } = require('../hooks/caveman-config.cjs');
+const { readMode, writeMode } = require('../hooks/caveman-config.cjs');
 
 const ENV_KEYS = [
   'CAVEMAN_DEFAULT_MODE',
@@ -103,7 +103,7 @@ test('the plugin module exports one dual V2/V1 definition', async () => {
   assert.equal(typeof module.default.server, 'function');
 });
 
-test('V2 setup registers commands that persist levels and submit the template', async () => {
+test('V2 setup registers commands that persist modes and submit the template', async () => {
   const ctx = await setupV2();
 
   assert.deepEqual(ctx.commands.map((command) => command.name).sort(), [
@@ -111,6 +111,8 @@ test('V2 setup registers commands that persist levels and submit the template', 
     'caveman-commit',
     'caveman-help',
     'caveman-review',
+    'megacave',
+    'ultracave',
   ]);
   for (const command of ctx.commands) {
     assert.ok(command.description.length > 0, command.name + ' has a description');
@@ -119,32 +121,43 @@ test('V2 setup registers commands that persist levels and submit the template', 
 
   const caveman = ctx.commands.find((command) => command.name === 'caveman');
   await caveman.execute({ sessionID: 's', prompt: { text: 'ultra' }, delivery: 'steer' });
-  assert.equal(readLevel(), 'ultra');
+  assert.equal(readMode(), 'ultracave');
   assert.equal(ctx.prompts.length, 1);
   assert.equal(ctx.prompts[0].sessionID, 's');
   assert.equal(ctx.prompts[0].delivery, 'steer');
   assert.match(ctx.prompts[0].text, /^Switch to caveman ultra mode\./);
 
   await caveman.execute({ sessionID: 's', prompt: { text: 'wenyan' }, delivery: 'steer' });
-  assert.equal(readLevel(), 'wenyan-full');
+  assert.equal(readMode(), 'megacave');
 
   await caveman.execute({ sessionID: 's', prompt: { text: '' }, delivery: 'steer' });
-  assert.equal(readLevel(), 'full');
+  assert.equal(readMode(), 'caveman');
+
+  await caveman.execute({ sessionID: 's', prompt: { text: 'status' }, delivery: 'steer' });
+  assert.equal(readMode(), 'caveman');
 
   await caveman.execute({ sessionID: 's', prompt: { text: 'bogus' }, delivery: 'steer' });
-  assert.equal(readLevel(), 'full');
-  assert.equal(ctx.prompts.length, 4);
+  assert.equal(readMode(), 'caveman');
+  assert.equal(ctx.prompts.length, 5);
+
+  const ultracave = ctx.commands.find((command) => command.name === 'ultracave');
+  await ultracave.execute({ sessionID: 's', prompt: { text: '' }, delivery: 'steer' });
+  assert.equal(readMode(), 'ultracave');
+
+  const megacave = ctx.commands.find((command) => command.name === 'megacave');
+  await megacave.execute({ sessionID: 's', prompt: { text: '' }, delivery: 'steer' });
+  assert.equal(readMode(), 'megacave');
 
   const help = ctx.commands.find((command) => command.name === 'caveman-help');
   await help.execute({ sessionID: 's', prompt: { text: '' }, delivery: 'steer' });
-  assert.equal(readLevel(), 'full');
-  assert.match(ctx.prompts[4].text, /^Use the caveman-help skill\./);
+  assert.equal(readMode(), 'megacave');
+  assert.match(ctx.prompts[7].text, /^Use the caveman-help skill\./);
 
   // Templates without $ARGUMENTS append non-empty arguments after a blank line.
   await help.execute({ sessionID: 's', prompt: { text: 'extra' }, delivery: 'steer' });
   assert.match(
-    ctx.prompts[5].text,
-    /card once\. Do not change the caveman level or write state\.\n\nextra$/,
+    ctx.prompts[8].text,
+    /card once\. Do not change the caveman mode or write state\.\n\nextra$/,
   );
 });
 
@@ -156,6 +169,8 @@ test('V2 setup registers the bundled skills without frontmatter', async () => {
     'caveman-commit',
     'caveman-help',
     'caveman-review',
+    'megacave',
+    'ultracave',
   ]);
   for (const skill of ctx.skills) {
     assert.ok(Array.isArray(skill.content) === false && skill.content.length > 0);
@@ -190,18 +205,24 @@ test('V2 setup upserts the cavecrew subagents and denies edit for read-only ones
   assert.equal(deniesEdit(byId('cavecrew-builder')), false);
 });
 
-test('V2 context hook injects the active level and stays silent when off', async () => {
+test('V2 context hook injects the active mode and stays silent when off', async () => {
   const ctx = await setupV2();
 
-  writeLevel('lite');
-  const lite = { system: [] };
-  await ctx.hooks.context(lite);
-  assert.equal(lite.system.length, 1);
-  assert.equal(lite.system[0].type, 'text');
-  assert.match(lite.system[0].text, /^CAVEMAN MODE ACTIVE — level: lite/);
-  assert.ok(lite.system[0].text.includes('| **lite** |'));
+  writeMode('ultracave');
+  const ultra = { system: [] };
+  await ctx.hooks.context(ultra);
+  assert.equal(ultra.system.length, 1);
+  assert.equal(ultra.system[0].type, 'text');
+  assert.match(ultra.system[0].text, /^CAVEMAN MODE ACTIVE — mode: ultracave/);
+  assert.ok(ultra.system[0].text.includes('Then cut again'));
 
-  writeLevel('off');
+  writeMode('megacave');
+  const mega = { system: [] };
+  await ctx.hooks.context(mega);
+  assert.match(mega.system[0].text, /^CAVEMAN MODE ACTIVE — mode: megacave/);
+  assert.ok(mega.system[0].text.includes('文言'));
+
+  writeMode('off');
   const off = { system: [] };
   await ctx.hooks.context(off);
   assert.deepEqual(off.system, []);
@@ -210,16 +231,16 @@ test('V2 context hook injects the active level and stays silent when off', async
 test('V2 prompt hook turns caveman off on a standalone deactivation message', async () => {
   const ctx = await setupV2();
 
-  writeLevel('full');
+  writeMode('caveman');
   await ctx.hooks.prompt({ prompt: { text: 'stop caveman' } });
-  assert.equal(readLevel(), 'off');
+  assert.equal(readMode(), 'off');
 
-  writeLevel('full');
+  writeMode('caveman');
   await ctx.hooks.prompt({ prompt: { text: 'add a normal mode toggle' } });
-  assert.equal(readLevel(), 'full');
+  assert.equal(readMode(), 'caveman');
 
   await ctx.hooks.prompt({ prompt: { text: 'normal mode' } });
-  assert.equal(readLevel(), 'off');
+  assert.equal(readMode(), 'off');
 });
 
 test('V1 server returns the legacy hooks object with the same behavior', async () => {
@@ -228,7 +249,14 @@ test('V1 server returns the legacy hooks object with the same behavior', async (
 
   const config = {};
   await hooks.config(config);
-  for (const name of ['caveman', 'caveman-commit', 'caveman-review', 'caveman-help']) {
+  for (const name of [
+    'caveman',
+    'caveman-commit',
+    'caveman-review',
+    'caveman-help',
+    'ultracave',
+    'megacave',
+  ]) {
     assert.ok(config.command[name], 'command ' + name + ' registered');
     assert.ok(config.command[name].template.length > 0, 'command ' + name + ' has a template');
     assert.ok(
@@ -251,63 +279,75 @@ test('V1 server returns the legacy hooks object with the same behavior', async (
   assert.deepEqual(config.agent['cavecrew-reviewer'].permission, { edit: 'deny' });
   assert.equal(config.agent['cavecrew-builder'].permission, undefined);
 
-  writeLevel('lite');
-  const lite = { system: ['base prompt'] };
-  await hooks['experimental.chat.system.transform']({}, lite);
-  assert.equal(lite.system.length, 1);
-  assert.match(lite.system[0], /^base prompt\n\nCAVEMAN MODE ACTIVE — level: lite/);
-  assert.ok(lite.system[0].includes('| **lite** |'));
+  writeMode('ultracave');
+  const ultra = { system: ['base prompt'] };
+  await hooks['experimental.chat.system.transform']({}, ultra);
+  assert.equal(ultra.system.length, 1);
+  assert.match(ultra.system[0], /^base prompt\n\nCAVEMAN MODE ACTIVE — mode: ultracave/);
 
-  writeLevel('off');
+  writeMode('off');
   const off = { system: ['base prompt'] };
   await hooks['experimental.chat.system.transform']({}, off);
   assert.deepEqual(off.system, ['base prompt']);
 
-  writeLevel('full');
+  writeMode('caveman');
   const empty = { system: [] };
   await hooks['experimental.chat.system.transform']({}, empty);
   assert.equal(empty.system.length, 1);
-  assert.match(empty.system[0], /^CAVEMAN MODE ACTIVE — level: full/);
+  assert.match(empty.system[0], /^CAVEMAN MODE ACTIVE — mode: caveman/);
 
   await hooks['command.execute.before']({ command: 'caveman', sessionID: 's', arguments: 'ultra' });
-  assert.equal(readLevel(), 'ultra');
+  assert.equal(readMode(), 'ultracave');
 
   await hooks['command.execute.before']({
     command: 'caveman',
     sessionID: 's',
     arguments: 'wenyan',
   });
-  assert.equal(readLevel(), 'wenyan-full');
+  assert.equal(readMode(), 'megacave');
 
   await hooks['command.execute.before']({ command: 'caveman', sessionID: 's', arguments: '' });
-  assert.equal(readLevel(), 'full');
+  assert.equal(readMode(), 'caveman');
+
+  await hooks['command.execute.before']({
+    command: 'caveman',
+    sessionID: 's',
+    arguments: 'status',
+  });
+  assert.equal(readMode(), 'caveman');
 
   await hooks['command.execute.before']({ command: 'caveman', sessionID: 's', arguments: 'bogus' });
-  assert.equal(readLevel(), 'full');
+  assert.equal(readMode(), 'caveman');
 
   await hooks['command.execute.before']({ command: 'caveman-help', sessionID: 's', arguments: '' });
-  assert.equal(readLevel(), 'full');
+  assert.equal(readMode(), 'caveman');
+
+  await hooks['command.execute.before']({ command: 'ultracave', sessionID: 's', arguments: '' });
+  assert.equal(readMode(), 'ultracave');
+
+  await hooks['command.execute.before']({ command: 'megacave', sessionID: 's', arguments: '' });
+  assert.equal(readMode(), 'megacave');
 
   await hooks['command.execute.before']({ command: 'caveman', sessionID: 's', arguments: 'off' });
-  assert.equal(readLevel(), 'off');
+  assert.equal(readMode(), 'off');
 
-  writeLevel('full');
+  writeMode('caveman');
   await hooks['chat.message'](
     { sessionID: 's' },
     { parts: [{ type: 'text', text: 'stop caveman' }] },
   );
-  assert.equal(readLevel(), 'off');
+  assert.equal(readMode(), 'off');
 
-  writeLevel('full');
+  writeMode('caveman');
   await hooks['chat.message'](
     { sessionID: 's' },
     { parts: [{ type: 'text', text: 'add a normal mode toggle' }] },
   );
-  assert.equal(readLevel(), 'full');
+  assert.equal(readMode(), 'caveman');
 
   await hooks['chat.message'](
     { sessionID: 's' },
     { parts: [{ type: 'file', text: 'normal mode' }] },
   );
-  assert.equal(readLevel(), 'full');
+  assert.equal(readMode(), 'caveman');
 });

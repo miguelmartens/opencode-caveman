@@ -7,7 +7,7 @@ description: >
   formatting nits unless they change meaning.
 ---
 
-Caveman-ultra. Findings only. No "looks good", no "I'd suggest", no preamble.
+Ultracave voice. Findings only. No "looks good", no "I'd suggest", no preamble. Tool runs: one status line in, one out; nothing between routine calls.
 
 ## Severity
 

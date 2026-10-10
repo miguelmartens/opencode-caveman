@@ -1,9 +1,12 @@
 // caveman — OpenCode plugin.
 //
 // Injects the caveman ruleset into every chat's system prompt at the active
-// level, persists /caveman level switches, answers the natural-language
+// mode, persists /caveman mode switches, answers the natural-language
 // deactivation commands, and registers the packaged commands, skills, and
 // cavecrew subagents so they work when the package is installed from npm.
+//
+// Modes: caveman (default), ultracave, megacave, off. Legacy level names
+// (lite/full/ultra/wenyan*) resolve through hooks/caveman-config.cjs.
 //
 // One default export serves both OpenCode plugin APIs: V2 validates `id` plus
 // `setup(ctx)`; V1 (1.18.29+) calls `server()` for the legacy hooks object.
@@ -20,12 +23,13 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // The shared helpers are CommonJS; bridge to them from this ES module.
 const require = createRequire(import.meta.url);
 const {
+  DEFAULT_MODE,
   isDeactivationCommand,
-  normalizeLevel,
-  readLevel,
-  writeLevel,
+  normalizeMode,
+  readMode,
+  writeMode,
 } = require('../../../hooks/caveman-config.cjs');
-const { getLevelInstructions } = require('../../../hooks/caveman-instructions.cjs');
+const { getModeInstructions } = require('../../../hooks/caveman-instructions.cjs');
 const { parseAgentFile, parseCommandFile, parseSkillFile } = require('./caveman-frontmatter.cjs');
 
 // Read-only by contract; enforce it so a misread prompt cannot edit files.
@@ -52,6 +56,18 @@ function skillFiles() {
   } catch (e) {
     return [];
   }
+}
+
+// The command decides the mode: `/caveman` reads it from the first argument
+// (bare command means "turn it on" at the default mode), while `/ultracave`
+// and `/megacave` are the mode themselves. `status` and unknown words change
+// nothing.
+function commandMode(name, args) {
+  if (name !== 'caveman') return normalizeMode(name);
+  const first = String(args || '')
+    .trim()
+    .split(/\s+/)[0];
+  return first ? normalizeMode(first) : DEFAULT_MODE;
 }
 
 // V2 command definitions submit their own prompt, so expand the markdown
@@ -81,11 +97,8 @@ export default {
             description: parsed.description,
             execute: async ({ sessionID, prompt, delivery }) => {
               const args = String(prompt.text || '');
-              if (name === 'caveman') {
-                // No argument means "turn it on": full, matching the upstream command.
-                const level = args.trim() ? normalizeLevel(args.trim().split(/\s+/)[0]) : 'full';
-                if (level) writeLevel(level);
-              }
+              const mode = commandMode(name, args);
+              if (mode) writeMode(mode);
               await ctx.session.prompt({
                 ...prompt,
                 sessionID,
@@ -140,9 +153,9 @@ export default {
 
     // Append the ruleset to the system prompt before every agent-loop request.
     await ctx.session.hook('context', (event) => {
-      const level = readLevel();
-      if (level === 'off') return;
-      event.system.push({ type: 'text', text: getLevelInstructions(level) });
+      const instructions = getModeInstructions(readMode());
+      if (!instructions) return;
+      event.system.push({ type: 'text', text: instructions });
     });
 
     // "stop caveman" / "normal mode" as a standalone message turns it off;
@@ -150,7 +163,7 @@ export default {
     await ctx.session.hook('prompt', (event) => {
       const text = event.prompt && event.prompt.text;
       if (!isDeactivationCommand(text)) return;
-      writeLevel('off');
+      writeMode('off');
     });
   },
 
@@ -198,9 +211,8 @@ export default {
 
       // Append the ruleset to the system prompt every turn.
       'experimental.chat.system.transform': async (_input, output) => {
-        const level = readLevel();
-        if (level === 'off') return;
-        const instructions = getLevelInstructions(level);
+        const instructions = getModeInstructions(readMode());
+        if (!instructions) return;
         if (output.system.length > 0) {
           output.system[output.system.length - 1] += '\n\n' + instructions;
         } else {
@@ -208,15 +220,14 @@ export default {
         }
       },
 
-      // Persist `/caveman <level>` so the next turn's injection follows it.
+      // Persist `/caveman <mode>` (or `/ultracave`, `/megacave`) so the next
+      // turn's injection follows it.
       'command.execute.before': async (input) => {
-        if (!input || input.command !== 'caveman') return;
-        // No argument means "turn it on": full, matching the upstream command.
-        const args = String(input.arguments || '').trim();
-        const level = args ? normalizeLevel(args.split(/\s+/)[0]) : 'full';
-        if (!level) return;
-        writeLevel(level);
-        log('info', 'caveman level ' + level);
+        if (!input || !input.command) return;
+        const mode = commandMode(input.command, input.arguments);
+        if (!mode) return;
+        writeMode(mode);
+        log('info', 'caveman mode ' + mode);
       },
 
       // "stop caveman" / "normal mode" as a standalone message turns it off;
@@ -227,7 +238,7 @@ export default {
           .map((part) => part.text)
           .join('\n');
         if (!isDeactivationCommand(text)) return;
-        writeLevel('off');
+        writeMode('off');
         log('info', 'caveman off');
       },
     };

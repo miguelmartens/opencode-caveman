@@ -2,84 +2,59 @@
 
 // caveman — shared instructions builder for the OpenCode plugin.
 //
-// The injected ruleset is the vendored caveman skill body filtered to the
-// active level: only that level's intensity-table row and worked examples
-// survive. Everything else in the skill is level-independent and kept
-// verbatim.
+// The injected ruleset is the active mode's vendored skill, loaded whole with
+// frontmatter stripped, under the same `CAVEMAN MODE ACTIVE — mode: <mode>`
+// banner upstream's hooks use. Modes: caveman, ultracave, megacave; `off`
+// injects nothing.
 
 const fs = require('fs');
 const path = require('path');
-const { DEFAULT_LEVEL, normalizeLevel } = require('./caveman-config.cjs');
+const { DEFAULT_MODE, normalizeMode } = require('./caveman-config.cjs');
 
-const SKILL_PATH = path.join(__dirname, '..', 'skills', 'caveman', 'SKILL.md');
+const SKILL_DIR = path.join(__dirname, '..', 'skills');
+const RULESET_MODES = ['caveman', 'ultracave', 'megacave'];
 
-function filterSkillBodyForLevel(body, level) {
-  const effectiveLevel = normalizeLevel(level) || DEFAULT_LEVEL;
-  const withoutFrontmatter = String(body || '').replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/, '');
+// Thesis line per mode, used only when the vendored skill file is unreadable.
+const FALLBACK_THESIS = {
+  caveman: 'Respond terse like smart caveman. All technical substance stay. Only fluff die.',
+  ultracave:
+    'Respond terse like smart caveman. All technical substance stay. Only fluff die. Then cut again.',
+  megacave: '以文言答。技術之實皆存，唯贅言去之。',
+};
 
-  // Only the intensity table rows and the worked examples are level-specific,
-  // and both are keyed by a level name. A bullet whose label is not a level —
-  // e.g. "Never drop not/never/no..." — is a normal rule and stays.
-  return withoutFrontmatter
-    .split(/\r?\n/)
-    .filter((line) => {
-      const tableLabel = line.match(/^\|\s*\*\*(.+?)\*\*\s*\|/);
-      if (tableLabel) {
-        const labelLevel = normalizeLevel(tableLabel[1].trim());
-        if (labelLevel) return labelLevel === effectiveLevel;
-      }
-
-      // Require a quoted value: every worked example is `- lite: "..."`.
-      // Without this, an ordinary rule bullet that happens to start with a
-      // level word would be silently dropped in every other level.
-      const exampleLabel = line.match(/^-\s*([^:]+):\s*"/);
-      if (exampleLabel) {
-        const labelLevel = normalizeLevel(exampleLabel[1].trim());
-        if (labelLevel) return labelLevel === effectiveLevel;
-      }
-
-      return true;
-    })
-    .join('\n');
+function stripFrontmatter(body) {
+  return String(body || '').replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/, '');
 }
 
-function getFallbackInstructions(level) {
-  return (
-    'CAVEMAN MODE ACTIVE — level: ' +
-    level +
-    '\n\n' +
-    'Respond terse like smart caveman. All technical substance stay. Only fluff die.\n\n' +
-    '## Persistence\n\n' +
-    'Default style every response until user say "stop caveman" or "normal mode".\n\n' +
-    '## Rules\n\n' +
-    'Drop articles, filler, pleasantries, hedging. Fragments OK. Short synonyms. ' +
-    'No tool-call narration. Technical terms, code, commands, and error strings exact and unchanged. ' +
-    'Never drop not/never/no/only/except. Never invent abbreviations or arrows. ' +
-    'Keep one idea per sentence, active voice, one term per thing.\n\n' +
-    '## Auto-Clarity\n\n' +
-    'Full sentences for security warnings, irreversible actions, and anything ambiguous under compression. Resume after.\n\n' +
-    '## Boundaries\n\n' +
-    'Code, commits, docs, and messages to other humans stay normal prose.'
-  );
+function rulesetBanner(mode) {
+  return 'CAVEMAN MODE ACTIVE — mode: ' + mode;
 }
 
-function getLevelInstructions(level) {
-  const effectiveLevel = normalizeLevel(level) || DEFAULT_LEVEL;
+// Returns null for `off` and unknown modes: nothing to inject.
+function getModeInstructions(mode) {
+  const effectiveMode = normalizeMode(mode) || DEFAULT_MODE;
+  if (!RULESET_MODES.includes(effectiveMode)) return null;
 
   try {
-    return (
-      'CAVEMAN MODE ACTIVE — level: ' +
-      effectiveLevel +
-      '\n\n' +
-      filterSkillBodyForLevel(fs.readFileSync(SKILL_PATH, 'utf8'), effectiveLevel)
-    );
+    const body = stripFrontmatter(
+      fs.readFileSync(path.join(SKILL_DIR, effectiveMode, 'SKILL.md'), 'utf8'),
+    ).trim();
+    return rulesetBanner(effectiveMode) + '\n\n' + body;
   } catch (e) {
-    return getFallbackInstructions(effectiveLevel);
+    return getFallbackInstructions(effectiveMode);
   }
 }
 
+function getFallbackInstructions(mode) {
+  const effectiveMode = normalizeMode(mode) || DEFAULT_MODE;
+  const thesis = FALLBACK_THESIS[effectiveMode];
+  if (!thesis) return null;
+  return rulesetBanner(effectiveMode) + '\n\n' + thesis;
+}
+
 module.exports = {
-  filterSkillBodyForLevel,
   getFallbackInstructions,
-  getLevelInstructions,
+  getModeInstructions,
+  rulesetBanner,
+  stripFrontmatter,
 };

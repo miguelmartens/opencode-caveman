@@ -10,8 +10,8 @@ here descriptively, to identify the rules that were adapted.
 ## Vendored content
 
 The following files are vendored verbatim from
-<https://github.com/JuliusBrussee/caveman> at commit
-`542442bab314973709f95b85b1ac0b3f6f5b5dc6` (2026-09-17), except that the
+<https://github.com/JuliusBrussee/caveman> at tag `v3.2.0` (commit
+`e20f07e8152a0c0360f58c09e79d30ac94329991`, 2026-10-08), except that the
 Claude-specific `model:` line was removed from the vendored agent frontmatter
 so each subagent inherits the user's configured OpenCode provider:
 
@@ -19,6 +19,8 @@ so each subagent inherits the user's configured OpenCode provider:
 - `skills/caveman-commit/SKILL.md`
 - `skills/caveman-review/SKILL.md`
 - `skills/caveman-help/SKILL.md`
+- `skills/megacave/SKILL.md`
+- `skills/ultracave/SKILL.md`
 - `agents/cavecrew-investigator.md`
 - `agents/cavecrew-builder.md`
 - `agents/cavecrew-reviewer.md`

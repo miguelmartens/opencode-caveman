@@ -2,30 +2,41 @@
 
 // caveman — shared configuration resolver.
 //
-// Default level resolution order:
+// Default mode resolution order:
 //   1. CAVEMAN_DEFAULT_MODE environment variable
 //   2. Config file defaultMode field:
 //      - $CAVEMAN_CONFIG_DIR/config.json (explicit override, used by tests)
 //      - $XDG_CONFIG_HOME/caveman/config.json
 //      - ~/.config/caveman/config.json (macOS / Linux)
 //      - %APPDATA%\caveman\config.json (Windows fallback)
-//   3. 'full'
+//   3. 'caveman'
+//
+// Modes: off, caveman, ultracave, megacave. Upstream's older level names still
+// resolve, exactly as they do in Caveman 3.x: lite/full → caveman,
+// ultra → ultracave, wenyan* → megacave.
 
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
 
-const DEFAULT_LEVEL = 'full';
-const LEVELS = ['off', 'lite', 'full', 'ultra', 'wenyan-lite', 'wenyan-full', 'wenyan-ultra'];
+const DEFAULT_MODE = 'caveman';
+const MODES = ['off', 'caveman', 'ultracave', 'megacave'];
 
-// Upstream trigger `/caveman wenyan` means the full wenyan register.
-const ALIASES = { wenyan: 'wenyan-full' };
+const LEGACY_MODES = {
+  lite: 'caveman',
+  full: 'caveman',
+  ultra: 'ultracave',
+  wenyan: 'megacave',
+  'wenyan-lite': 'megacave',
+  'wenyan-full': 'megacave',
+  'wenyan-ultra': 'megacave',
+};
 
-function normalizeLevel(level) {
-  if (typeof level !== 'string') return null;
-  const normalized = level.trim().toLowerCase();
-  const resolved = ALIASES[normalized] || normalized;
-  return LEVELS.includes(resolved) ? resolved : null;
+function normalizeMode(mode) {
+  if (typeof mode !== 'string') return null;
+  const normalized = mode.trim().toLowerCase();
+  const resolved = LEGACY_MODES[normalized] || normalized;
+  return MODES.includes(resolved) ? resolved : null;
 }
 
 function getConfigDir() {
@@ -44,19 +55,19 @@ function getConfigPath() {
   return path.join(getConfigDir(), 'config.json');
 }
 
-function getDefaultLevel() {
-  const envLevel = normalizeLevel(process.env.CAVEMAN_DEFAULT_MODE);
-  if (envLevel) return envLevel;
+function getDefaultMode() {
+  const envMode = normalizeMode(process.env.CAVEMAN_DEFAULT_MODE);
+  if (envMode) return envMode;
 
   try {
     const config = JSON.parse(fs.readFileSync(getConfigPath(), 'utf8').replace(/^\uFEFF/, ''));
-    const configLevel = normalizeLevel(config.defaultMode);
-    if (configLevel) return configLevel;
+    const configMode = normalizeMode(config.defaultMode);
+    if (configMode) return configMode;
   } catch (e) {
     // Missing or invalid config — fall through.
   }
 
-  return DEFAULT_LEVEL;
+  return DEFAULT_MODE;
 }
 
 // OpenCode has no flag-file convention of its own; keep mode beside its config.
@@ -70,16 +81,17 @@ function getStatePath() {
   return path.join(configDir, '.caveman-active');
 }
 
-function readLevel() {
+// Legacy level names written by older plugin versions still resolve here.
+function readMode() {
   try {
-    return normalizeLevel(fs.readFileSync(getStatePath(), 'utf8')) || getDefaultLevel();
+    return normalizeMode(fs.readFileSync(getStatePath(), 'utf8')) || getDefaultMode();
   } catch (e) {
-    return getDefaultLevel();
+    return getDefaultMode();
   }
 }
 
-function writeLevel(level) {
-  const normalized = normalizeLevel(level);
+function writeMode(mode) {
+  const normalized = normalizeMode(mode);
   if (!normalized) return null;
   const statePath = getStatePath();
   fs.mkdirSync(path.dirname(statePath), { recursive: true });
@@ -100,14 +112,14 @@ function isDeactivationCommand(text) {
 }
 
 module.exports = {
-  DEFAULT_LEVEL,
-  LEVELS,
+  DEFAULT_MODE,
+  MODES,
   getConfigDir,
   getConfigPath,
-  getDefaultLevel,
+  getDefaultMode,
   getStatePath,
   isDeactivationCommand,
-  normalizeLevel,
-  readLevel,
-  writeLevel,
+  normalizeMode,
+  readMode,
+  writeMode,
 };
