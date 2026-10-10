@@ -4,6 +4,13 @@ All notable changes to this project are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0](https://github.com/miguelmartens/opencode-caveman/compare/v1.0.3...v1.1.0) (2026-10-10)
+
+
+### Features
+
+* switch to Caveman 3.2.0 modes (caveman, ultracave, megacave) ([221a310](https://github.com/miguelmartens/opencode-caveman/commit/221a310c4e38203de9ebed586c15eeb1bae0b853))
+
 ## [1.0.3](https://github.com/miguelmartens/opencode-caveman/compare/v1.0.2...v1.0.3) (2026-10-10)
 
 
